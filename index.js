@@ -4,9 +4,10 @@
  * @export {Function}
  * @param {JSON} json
  * @param {Function} callback callback has 4 arguments: [element, parentObject, key, json]
+ * @param {Function} finish this will be excuted at the deadline of traversal. and it has 1 argument: [json]
  * @returns {JSON}
  */
-export default async function travelJSON (json, callback) {
+export default async function travelJSON (json, callback, finish) {
   json = JSON.parse(JSON.stringify(json)) // deep copy json
   let travel = async function (currentObject, parentObject) {
     if (currentObject.__proto__.constuctor === Object) {
@@ -25,5 +26,6 @@ export default async function travelJSON (json, callback) {
     }
   }
   await travel(json)
+  if (finish) await finish(json)
   return json
 }
