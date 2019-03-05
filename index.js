@@ -4,20 +4,20 @@
  * @export {Function}
  * @param {JSON} json
  * @param {Function} onMeetNode this callback has 5 arguments: {element, parentObject, path, json, propName}
- * @param {Function} onFinish this callback will be excuted at the deadline of traversal. and it has 1 argument: [json]
+ * @param {Function} onFinish this callback will be executed at the deadline of traversal. and it has 1 argument: [json]
  * @returns {JSON}
  */
 export default async function travelJSON ({json, onMeetNode, onFinish}) {
   json = JSON.parse(JSON.stringify(json)) // deep copy json
-  let travel = async function (element, parentObject, propName, path = '') {
-    if (parentObject) path = path+'.'+propName;
-    if (element.__proto__.constuctor === Object) {
+  let travel = async function (element, parentObject = json, propName, path = '') {
+    if (propName) path = path+'.'+propName;
+    if (element && element.__proto__.constructor === Object) {
       for (const key in element) {
         let e = element[key];
         await travel(e, parentObject, key, path+'.'+key)
       }
     }
-    else if (element.__proto__.constuctor === Array) {
+    else if (element && element.__proto__.constructor === Array) {
       for (let key = 0; key < element.length; key++) {
         let e = element[key];
         await travel(e, parentObject, key, path+'.'+key)
