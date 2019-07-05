@@ -20,7 +20,22 @@ let travel = async function({
   // eslint-disable-next-line no-undef
   if (node !== json)
     // eslint-disable-next-line no-undef
-    await onMeetNode({ node, parentNode, nodeKey, json, path });
+    await onMeetNode({ node, parentNode, nodeKey, json, path, deepFind });
+};
+
+let deepFind = function(obj, path) {
+  var paths = path.split("."),
+    current = obj,
+    i;
+
+  for (i = 0; i < paths.length; ++i) {
+    if (current[paths[i]] == undefined) {
+      return undefined;
+    } else {
+      current = current[paths[i]];
+    }
+  }
+  return current;
 };
 
 /**
@@ -28,13 +43,14 @@ let travel = async function({
  *
  * @export {Function}
  * @param {JSON} json
- * @param {Function} onMeetNode this callback has 5 arguments: {node, parentNode, path, json, nodeKey}
+ * @param {Function} onMeetNode this callback has 5 arguments: {node, parentNode, path, json, nodeKey, deepFind}
  * @param {Function} onFinish this callback will be executed at the deadline of traversal. and it has 1 argument: [json]
  * @returns {JSON}
  */
 // eslint-disable-next-line no-unused-vars
 export default async function travelJSON({ json, onMeetNode, onFinish }) {
   json = JSON.parse(JSON.stringify(json)); // deep copy json
+  deepFind = deepFind.bind(this, json);
   await travel(json);
   if (onFinish) await onFinish(json);
   return json;
