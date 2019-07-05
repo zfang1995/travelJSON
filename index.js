@@ -1,26 +1,26 @@
 let travel = async function({
-  element,
+  node,
   // eslint-disable-next-line no-undef
-  parentObject = json,
-  propName,
+  parentNode = json,
+  nodeKey,
   path = ""
 }) {
-  if (propName) path = path + "." + propName;
-  if (element && element.__proto__.constructor === Object) {
-    for (const key in element) {
-      let e = element[key];
-      await travel(e, parentObject, key, path + "." + key);
+  if (nodeKey) path = path + "." + nodeKey;
+  if (node && node.__proto__.constructor === Object) {
+    for (const key in node) {
+      let childNode = node[key];
+      await travel(childNode, parentNode, key, path + "." + key);
     }
-  } else if (element && element.__proto__.constructor === Array) {
-    for (let key = 0; key < element.length; key++) {
-      let e = element[key];
-      await travel(e, parentObject, key, path + "." + key);
+  } else if (node && node.__proto__.constructor === Array) {
+    for (let key = 0; key < node.length; key++) {
+      let childNode = node[key];
+      await travel(childNode, parentNode, key, path + "." + key);
     }
   }
   // eslint-disable-next-line no-undef
-  if (element !== json)
+  if (node !== json)
     // eslint-disable-next-line no-undef
-    await onMeetNode({ element, parentObject, propName, json, path });
+    await onMeetNode({ node, parentNode, nodeKey, json, path });
 };
 
 /**
@@ -28,7 +28,7 @@ let travel = async function({
  *
  * @export {Function}
  * @param {JSON} json
- * @param {Function} onMeetNode this callback has 5 arguments: {element, parentObject, path, json, propName}
+ * @param {Function} onMeetNode this callback has 5 arguments: {node, parentNode, path, json, nodeKey}
  * @param {Function} onFinish this callback will be executed at the deadline of traversal. and it has 1 argument: [json]
  * @returns {JSON}
  */
