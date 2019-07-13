@@ -1,31 +1,3 @@
-let travel = async function ({
-  node,
-  parentNode = null,
-  nodeKey = null,
-  path = ""
-}) {
-  if (nodeKey) path = path + "." + nodeKey;
-  if (node && node.__proto__.constructor === Object) {
-    for (const key in node) {
-      let childNode = node[key];
-      await travel({node: childNode, parentNode: node, key, path: path + "." + key});
-    }
-  } else if (node && node.__proto__.constructor === Array) {
-    for (let key = 0; key < node.length; key++) {
-      let childNode = node[key];
-      await travel({node: childNode, parentNode: node, key, path: path + "." + key});
-    }
-  }
-
-  await (onMeetNode && onMeetNode({ node, parentNode, nodeKey, json, path, deepFind }));
-
-  if (nodeKey === null) 
-    await (onRootNode && onRootNode({ json, deepFind }));
-  else if (typeof node !== "object")
-    await (onLeafNode && onLeafNode({ node, parentNode, nodeKey, json, path, deepFind }));
-  else
-    await (onBranchNode && onBranchNode({ node, parentNode, nodeKey, json, path, deepFind }));
-};
 
 let deepFind = function (obj, path) {
   var paths = path.split("."),
@@ -47,20 +19,57 @@ let deepFind = function (obj, path) {
  *
  * @export {Function}
  * @param {JSON} json
- * @param {Function} onMeetNode this callback has 5 arguments: {node, parentNode, path, json, nodeKey, deepFind}
- * @param {Function} onLeafNode
- * @param {Function} onBranchNode
- * @param {Function} onRootNode this callback will be executed at the deadline of traversal. and it has 1 argument: [json]
+ * @param {Function} onNodeCapturing this callback has 6 arguments: {node, parentNode, path, nodeType, nodeKey, deepFind, overleapChildren}
+ * @param {Function} onNodeBubbling this callback has 5 arguments: {node, parentNode, path, nodeType, nodeKey, deepFind}
  * @returns {JSON}
  */
-export default async function travelJSON({
+module.exports = async function travelJSON({
   json,
-  onMeetNode,
-  onLeafNode,
-  onBranchNode,
-  onRootNode
+  onNodeBubbling,
+  onNodeCapturing
 }) {
+  if (!json) {
+    throw 'no json to traverse'
+  }
+
   deepFind = deepFind.bind(this, json);
-  await travel({ node: json });
+  let overleaped = new Set();
+
+  let overleapChildren = function (node) {
+    overleaped.add(node)
+  }
+
+  let travel = async function (node, {parentNode, nodeKey, path, nodeType} = {
+    parentNode: null,
+    nodeKey: null,
+    path: "",
+    nodeType:'root'
+  }) {
+    // 计算 `path` 与 `nodeType` 的值。
+    if (nodeKey) {
+      path = path + "." + nodeKey;
+      if (typeof node === "object") {
+        nodeType = 'branch'
+      } else {
+        nodeType = 'leaf'
+      }
+    }
+
+    await (onNodeCapturing && onNodeCapturing({ node, parentNode, nodeKey, path, deepFind, nodeType, overleapChildren}));
+
+    if (typeof node === "object") {
+      if (!overleaped.has(node)) {
+        for (const key in node) {
+          let childNode = node[key];
+          await travel(childNode, { parentNode: node, nodeKey: key, path: path + "." + key });
+        }
+      }
+    }
+
+    await (onNodeBubbling && onNodeBubbling({ node, parentNode, nodeKey, path, deepFind, nodeType }));
+  };
+
+  await travel(json);
   return json;
 }
+
