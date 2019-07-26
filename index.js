@@ -21,9 +21,9 @@ let deepFind = function (obj, path) {
  *
  * @export {Function}
  * @param {JSON} json
- * @param {Function} onNodeCapturing this callback has 6 arguments: {node, parentNode, path, nodeType, nodeKey, deepFind, overleapChildren}
- * @param {Function} onNodeBubbling this callback has 5 arguments: {node, parentNode, path, nodeType, nodeKey, deepFind}
- * @returns {JSON}
+ * @param {Function} onNodeCapturing this callback has 7 arguments: {node, nodeType, nodeKey, parentNode, deepFind, path, depth, overleapChildren}
+ * @param {Function} onNodeBubbling this callback has 6 arguments: {node, nodeType, nodeKey, parentNode, deepFind, path, depth}
+ * @returns {JSON} json
  */
 module.exports = async function travelJSON({
   json,
@@ -43,11 +43,12 @@ module.exports = async function travelJSON({
 
   let bubblingQueue = [];
 
-  let travel = async function (node, {parentNode, nodeKey, path, nodeType} = {
+  let travel = async function (node, {parentNode, nodeKey, path, nodeType, depth} = {
     parentNode: null,
     nodeKey: null,
     path: "",
-    nodeType:'root'
+    nodeType:'root',
+    depth: 0
   }) {
     // 计算 `path` 与 `nodeType` 的值。
     if (nodeKey) {
@@ -59,18 +60,18 @@ module.exports = async function travelJSON({
       }
     }
 
-    await (onNodeCapturing && onNodeCapturing({ node, parentNode, nodeKey, path, deepFind, nodeType, overleapChildren}));
+    await (onNodeCapturing && onNodeCapturing({ node, parentNode, nodeKey, path, deepFind, nodeType, overleapChildren, depth}));
 
     if (typeof node === "object") {
       if (!overleaped.has(node)) {
         for (const key in node) {
           let childNode = node[key];
-          await travel(childNode, { parentNode: node, nodeKey: key, path: path + "." + key });
+          await travel(childNode, { parentNode: node, nodeKey: key, path: path + "." + key, depth: depth+1 });
         }
       }
     }
 
-    if (onNodeBubbling) bubblingQueue.push({ node, parentNode, nodeKey, path, deepFind, nodeType })
+    if (onNodeBubbling) bubblingQueue.push({ node, parentNode, nodeKey, path, deepFind, nodeType, depth })
   };
 
   await travel(json);
