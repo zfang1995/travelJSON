@@ -15,7 +15,9 @@ let deepFind = function (obj, path) {
 };
 
 /**
- * 遍历给定的JSON，遍历会从某个叶节点开始，优先遍历完所有的叶节点，然后逐级向上遍历父节点，直到遍历至根节点前结束。每当在遍历至新节点时（不包括根节点），`onMeetNode` 句柄函数就会被调用；当遍历至根节点时，`onFinish`句柄函数会被调用。
+ * 遍历给定的JSON，遍历过程可分为捕获与冒泡两个阶段：
+ * 首先开始的是捕获阶段，这时程序会从JSON的根节点开始进行深度优先遍历，每当遍历至新节点时就会触发`onNodeCapturing`句柄函数，并将该节点标记为已被捕获；
+ * 当捕获阶段的所有回调函数都执行结束后，冒泡阶段便开始了。冒泡事件只会在已被捕获的节点上触发，且仅当该节点的所有后代节点都已触发过`onNodeBubbling`句柄函数或者该节点没有后代节点时，该节点才会触发`onNodeBubbling`句柄函数。
  *
  * @export {Function}
  * @param {JSON} json
@@ -38,6 +40,8 @@ module.exports = async function travelJSON({
   let overleapChildren = function (node) {
     overleaped.add(node)
   }
+
+  let bubblingQueue = [];
 
   let travel = async function (node, {parentNode, nodeKey, path, nodeType} = {
     parentNode: null,
@@ -66,10 +70,17 @@ module.exports = async function travelJSON({
       }
     }
 
-    await (onNodeBubbling && onNodeBubbling({ node, parentNode, nodeKey, path, deepFind, nodeType }));
+    if (onNodeBubbling) bubblingQueue.push({ node, parentNode, nodeKey, path, deepFind, nodeType })
   };
 
   await travel(json);
+  // nodes bubbling
+  if (onNodeBubbling) {
+    for (const e of bubblingQueue) {
+      await onNodeBubbling(e)
+    }
+  }
+
   return json;
 }
 
